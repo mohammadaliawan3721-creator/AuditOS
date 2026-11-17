@@ -8,6 +8,8 @@ It ships with four industry workspaces. Each one has its own fictional company, 
 
 ---
 
+See [REVERSE-ENGINEERING.md](REVERSE-ENGINEERING.md) for the feature-by-feature comparison with commercial audit platforms that drove v2.1.
+
 ## Contents
 
 1. [Features](#features)
@@ -35,6 +37,10 @@ It ships with four industry workspaces. Each one has its own fictional company, 
 | **Fieldwork** | Test of design across 5 design attributes. Dynamic testing of operating effectiveness, one sample at a time with explanations. Agree or override each exception, sign the conclusion, and draft an issue with AI. |
 | **Issues management** | Issues in 5C format (condition, criteria, cause, consequence, corrective action). The workflow runs Draft → Open → In progress → Closed, pending validation → Closed, with overdue tracking and an AI SMART action plan. |
 | **Audit reporting** | Audit report with overall rating, executive summary, control results and findings, built from approved issues only. Includes an Audit Committee summary with decisions and escalations required. |
+| **Evidence requests (PBC)** | The Request List agent drafts evidence requests per control from the test scripts. Send, remind overdue owners, record uploads, accept or return with a reason. Track ageing and turnaround, and export as CSV. |
+| **Workpaper review** | A *Review and sign-off* tab on every fieldwork control. Preparer and reviewer sign-off with enforced segregation of duties, and review notes (Open → Addressed → Cleared). Final reports are blocked until workpapers are reviewed and evidence is accepted. |
+| **Time and budget** | Budgets by phase, time logging, an estimate at completion from workpaper progress, over-budget flags and team utilisation. |
+| **Framework crosswalk** | Test once, comply many. Controls map to COSO 2013, NIST CSF 2.0 and SOX ICFR, and the latest signed conclusion flows to every mapped framework. Reviewers confirm each mapping. |
 | **Agent control centre** | Turn each agent on or off, edit its system prompt, run a test, tune the consolidation routing thresholds, and read the run log and the decision log (the human-oversight audit trail). |
 
 ## Industries included
@@ -84,7 +90,9 @@ auditos/
 │       ├── core.js                  # state, scoring rules, AgentRuntime, shell, router, events
 │       ├── home-dashboard-sensing.js
 │       ├── assessment-planning.js
-│       └── fieldwork-issues-reporting-agents.js   # also boots the app
+│       ├── fieldwork-issues-reporting-agents.js
+│       ├── governance.js            # users/SoD, review notes, PBC requests, time and budget, framework crosswalk
+│       └── boot.js                  # starts the app
 ├── LICENSE
 └── README.md
 ```
@@ -129,14 +137,14 @@ Edit the files in `src/`, then run `python3 build.py`. Do not edit `docs/index.h
 
 ## The agents
 
-There are 18 agents in `src/data/shared.js` (the `AGENTS` array). Each has a purpose, inputs, outputs, a human gate and a system prompt.
+There are 19 agents in `src/data/shared.js` (the `AGENTS` array). Each has a purpose, inputs, outputs, a human gate and a system prompt.
 
 | Module | Agents |
 |---|---|
 | Risk sensing | Threats, Scandals, Regulations, Market Signals, PY Audit Extractor, Transcript Extractor, KRI Monitor, Consolidation |
 | Risk assessment | Scoring |
 | Audit planning | Plan Generator, Risk Statement Writer, Controls, Planning Memo Writer, RCM Builder, Test Script Writer |
-| Fieldwork | Dynamic Testing |
+| Fieldwork | Request List, Dynamic Testing |
 | Issues and reporting | Issue Drafting, Report Writer |
 
 In this prototype every agent runs in **simulated mode**: it returns realistic output built from the dataset after a short delay. All calls go through one function, `AgentRuntime.run()` in `src/js/core.js`, so switching to live AI later changes that function and nothing else.
@@ -247,7 +255,7 @@ Before going live, check the API terms, data-residency needs and the internal ap
 
 - All data is fictional, and agent outputs are simulated from templates and the dataset.
 - State is stored in each user's browser only. There is no multi-user sharing until phase 2.
-- No authentication, roles or segregation of duties between preparer and reviewer yet.
+- Roles and segregation of duties are enforced in the UI, but the user switcher is not authentication. Real identity needs the Phase 2 backend.
 - The regulatory references in the datasets are illustrative and are not legal advice. Verify current rules before using any of this content in real work.
 
 ## License

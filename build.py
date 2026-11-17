@@ -20,6 +20,8 @@ JS_FILES = [
     'js/home-dashboard-sensing.js',
     'js/assessment-planning.js',
     'js/fieldwork-issues-reporting-agents.js',
+    'js/governance.js',
+    'js/boot.js',
 ]
 
 css = (SRC / 'styles.css').read_text(encoding='utf-8')

@@ -14,14 +14,14 @@ RENDER.fieldwork = () => {
   if (!fw[S.ui.fwControl]) S.ui.fwControl = cs[0].id;
   const c = CONTROLS.find(x => x.id === S.ui.fwControl), f = fw[c.id], tab = S.ui.fwTab;
   let work;
-  if (tab === 'toe') work = toePanel(a, c, f); else if (tab === 'concl') work = conclPanel(a, c, f); else work = todPanel(a, c, f);
+  if (tab === 'review') work = reviewPanel(a, c, f); else if (tab === 'toe') work = toePanel(a, c, f); else if (tab === 'concl') work = conclPanel(a, c, f); else work = todPanel(a, c, f);
   return `<div class="page-head"><div><h1>Fieldwork</h1><p class="sub">Test of design and operating effectiveness. The Dynamic Testing agent reads each sample and explains every result; you accept or override and sign the conclusion.</p></div>
     <select data-chg="fwAudit" style="width:auto" aria-label="Audit">${auds.map(x => `<option value="${x.id}" ${x.id === a.id ? 'selected' : ''}>${x.id} · ${esc(x.title)}</option>`).join('')}</select></div>
   <div class="grid" style="grid-template-columns:260px minmax(0,1fr)">
     <div class="card flush" style="align-self:start"><div style="padding:12px 14px;border-bottom:1px solid var(--line)"><h4>Controls in scope</h4><span class="tiny faint">${cs.length} from the RCM</span></div>
-      ${cs.map(x => `<div class="clickable" data-act="fwControl" data-id="${x.id}" style="padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer;${x.id === c.id ? 'background:var(--accent-soft)' : ''}"><div class="small"><span class="id">${x.id}</span> ${esc(x.name)}</div><div class="row mt" style="margin-top:4px">${fwPill(fwStatus(fw[x.id]))}<span class="tiny faint">${x.freq}</span></div></div>`).join('')}</div>
+      ${cs.map(x => `<div class="clickable" data-act="fwControl" data-id="${x.id}" style="padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer;${x.id === c.id ? 'background:var(--accent-soft)' : ''}"><div class="small"><span class="id">${x.id}</span> ${esc(x.name)}</div><div class="row mt" style="margin-top:4px">${fwPill(fwStatus(fw[x.id]))}${signPill(fw[x.id], a.id, x.id)}<span class="tiny faint">${x.freq}</span></div></div>`).join('')}</div>
     <div><div class="card"><div class="id">${c.id} · ${c.risk} ${esc(riskById(c.risk).title)}</div><h2 style="margin-top:2px">${esc(c.name)}</h2><div class="row mt"><span class="pill outline">${c.type}</span><span class="pill outline">${c.nature}</span><span class="pill outline">${c.freq}</span><span class="small faint">Owner ${esc(c.owner)}</span></div></div>
-      <div class="mt">${tabs('fw', tab, [['tod', 'Test of design'], ['toe', 'Operating effectiveness'], ['concl', 'Conclusion']]).replace(/data-act="tab"/g, 'data-act="fwTab"')}</div>${work}</div>
+      <div class="mt">${tabs('fw', tab, [['tod', 'Test of design'], ['toe', 'Operating effectiveness'], ['concl', 'Conclusion'], ['review', 'Review and sign-off', openNotes(a.id, c.id).length || '']]).replace(/data-act="tab"/g, 'data-act="fwTab"')}</div>${work}</div>
   </div>`;
 };
 CHG.fwAudit = el => { S.ui.fwAudit = el.value; S.ui.fwControl = null; S.ui.fwTab = 'tod'; save(); render(); };
@@ -223,7 +223,7 @@ function auditReport() {
 CHG.reportAudit = el => { S.ui.reportAudit = el.value; save(); render(); };
 ACT.genReport = async el => { try { await AgentRuntime.run('report', { audit: el.dataset.id }, { ms: 1200, log: `Report drafted for ${el.dataset.id}`, output: () => true }); S.reports[el.dataset.id] = { at: nowStr() }; if (auditById(el.dataset.id).status === 'Fieldwork') auditById(el.dataset.id).status = 'Reporting'; save(); render(); } catch (e) { /* off */ } };
 ACT.copyReport = () => copyText($('#reportDoc').innerText);
-ACT.markReported = el => { const a = auditById(el.dataset.id); a.rating = auditRating(a); a.status = 'Reported'; logDecision('Issued final audit report', a.id, a.rating); save(); render(); toast(`${a.id} final report issued: ${a.rating}`); };
+ACT.markReported = el => { const a = auditById(el.dataset.id); const blk = issueGate(a); if (blk.length) { openModal('Report cannot be issued yet', `<p class="small">Quality review gate for ${a.id}:</p><ul class="small">${blk.map(b => `<li>${esc(b)}</li>`).join('')}</ul><p class="small faint">Workpapers need preparer and reviewer sign-off with no open review notes, and every evidence request must be accepted.</p>`); return; } a.rating = auditRating(a); a.status = 'Reported'; logDecision('Issued final audit report', a.id, a.rating); save(); render(); toast(`${a.id} final report issued: ${a.rating}`); };
 
 function acSummary() {
   const above = activeRisks().filter(r => appetite(r) === 'above'), gaps = above.filter(r => !covered(r.id));
@@ -322,11 +322,3 @@ function integration() {
   <h4 class="mt">Suggested stack</h4><ul class="small" style="padding-left:18px"><li>Front end: this app, ported to React or kept as is.</li><li>API: Python (FastAPI) or Node, with the Claude API using structured JSON output.</li><li>Data: PostgreSQL with pgvector for evidence retrieval.</li><li>Jobs: a cron or queue worker for scheduled runs.</li><li>Hosting: inside the firm's cloud tenancy so audit data stays in your environment.</li></ul></div></div>`;
 }
 
-/* ---------------- BOOT ---------------- */
-let savedInd = null;
-try { savedInd = localStorage.getItem('auditos.industry'); } catch (e) { /* storage unavailable */ }
-applyDataset(savedInd || 'crypto');
-load();
-renderShell();
-window.addEventListener('hashchange', render);
-render();

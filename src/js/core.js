@@ -8,7 +8,7 @@ const clone = o => JSON.parse(JSON.stringify(o));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const pct = x => Math.round(x * 100) + '%';
 const storeKey = () => `auditos.v2.${IND}`;
-const ME = 'L. Varga (IA Manager)';
+let ME = 'L. Varga (IA Manager)';
 const REACHABLE = [1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 16, 20, 25];
 
 function nowStr() {
@@ -67,8 +67,8 @@ function blankFieldwork(c) {
 
 let S;
 function load() {
-  try { const raw = localStorage.getItem(storeKey()); if (raw) { const p = JSON.parse(raw); if (p && p.v === 1) { S = p; return; } } } catch (e) { /* storage unavailable */ }
-  S = seedState();
+  try { const raw = localStorage.getItem(storeKey()); if (raw) { const p = JSON.parse(raw); if (p && p.v === 1) { S = migrate(p); return; } } } catch (e) { /* storage unavailable */ }
+  S = migrate(seedState());
 }
 function save() { try { localStorage.setItem(storeKey(), JSON.stringify(S)); } catch (e) { /* storage unavailable */ } }
 
@@ -176,8 +176,12 @@ const ROUTES = [
   { id: 'assessment', label: 'Risk assessment', icon: 'grid', badge: () => activeRisks().filter(r => r.band === 'Unknown').length },
   { id: 'planning', label: 'Audit planning', icon: 'calendar' },
   { id: 'fieldwork', label: 'Fieldwork', icon: 'check' },
+  { id: 'requests', label: 'Evidence requests', icon: 'upload', badge: () => (S.requests || []).filter(reqOverdue).length },
   { id: 'issues', label: 'Issues management', icon: 'flag', badge: () => S.issues.filter(i => i.status === 'Draft' || isOverdue(i)).length },
   { id: 'reporting', label: 'Audit reporting', icon: 'book' },
+  { sec: 'Governance' },
+  { id: 'resources', label: 'Time and budget', icon: 'calendar' },
+  { id: 'frameworks', label: 'Framework crosswalk', icon: 'shield' },
   { sec: 'Orchestration' },
   { id: 'agents', label: 'Agent control centre', icon: 'bot' }
 ];
@@ -194,7 +198,8 @@ function renderShell() {
       <span class="mode-pill" title="Agents return demo output. Switch to live in the Agent control centre once the backend exists.">Simulated agents</span>
       <span class="org-pill" id="orgName">${esc(ORG.name)} · ${ORG.fy}</span>
       <select class="ind-select" data-chg="industry" aria-label="Industry">${INDUSTRIES.map(([k, l]) => `<option value="${k}" ${k === IND ? 'selected' : ''}>${l}</option>`).join('')}</select>
-      <span class="avatar" title="${esc(ME)}">LV</span>
+      <select class="ind-select" data-chg="user" aria-label="Signed in as" title="Switch user to test preparer and reviewer segregation of duties">${USERS().map(u => `<option value="${u.key}" ${u.name === ME ? 'selected' : ''}>${esc(u.name)} · ${u.role}</option>`).join('')}</select>
+      <span class="avatar" title="${esc(ME)}">${esc(ME.split(' ').slice(0, 2).map(w => w[0]).join(''))}</span>
     </header>
     <nav class="rail" id="rail" aria-label="Modules"></nav>
     <main class="main" id="main"></main>
@@ -258,7 +263,7 @@ const ACT = {
   closeDrawer: () => closeDrawer(),
   go: el => { location.hash = el.dataset.to; if (el.dataset.tab) setTab(el.dataset.to, el.dataset.tab); },
   resetDemo: () => openModal('Reset demo data?', '<p>This clears every decision, score and issue you changed in this browser and reloads the seed data.</p>', '<button class="btn" data-act="closeModal">Cancel</button><button class="btn primary" data-act="confirmReset">Reset</button>'),
-  confirmReset: () => { S = seedState(); save(); closeModal(); render(); toast('Demo data reset'); }
+  confirmReset: () => { S = migrate(seedState()); save(); closeModal(); render(); toast('Demo data reset'); }
 };
 function setTab(route, tab) {
   const key = { sensing: 'sensingTab', assessment: 'assessTab', planning: 'planTab', reporting: 'reportTab', agents: 'agentTab' }[route];
@@ -304,6 +309,7 @@ CHG.industry = el => {
   applyDataset(el.value);
   try { localStorage.setItem('auditos.industry', IND); } catch (e) { /* storage unavailable */ }
   load(); closeDrawer(); closeModal();
-  $('#orgName').textContent = `${ORG.name} · ${ORG.fy}`;
+  setUser(currentUserKey);
+  renderShell();
   render(); toast(`Switched to ${ORG.industry}: ${ORG.name}`);
 };
