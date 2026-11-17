@@ -19,16 +19,16 @@ RENDER.home = () => {
   return `
   <section class="hero">
     <div>
-      <div class="eyebrow" style="color:#7fd6cc">${esc(ORG.industry)} · ${ORG.fy} audit cycle · ${esc(ORG.name)}</div>
+      <div class="eyebrow">${esc(ORG.industry)} · ${ORG.fy} audit cycle · ${esc(ORG.name)}</div>
       <h1>One connected internal audit lifecycle, run by agents and signed off by auditors.</h1>
       <p>Each module hands its output to the next. Every agent result shows its evidence and confidence, and nothing changes the register, the plan or a conclusion until a reviewer approves it.</p>
       <div class="flow mt"><span class="n">Sense</span><span class="a">→</span><span class="n">Assess</span><span class="a">→</span><span class="n">Plan</span><span class="a">→</span><span class="n">Test</span><span class="a">→</span><span class="n">Issue</span><span class="a">→</span><span class="n">Report</span></div>
     </div>
     <div class="grid g2">
-      <div><div class="small" style="color:#7d939b">Agents enabled</div><div style="font-size:28px;font-weight:600;color:#fff">${enabled} / ${AGENTS.length}</div></div>
-      <div><div class="small" style="color:#7d939b">Agent runs logged</div><div style="font-size:28px;font-weight:600;color:#fff" class="num">${runs.toLocaleString()}</div></div>
-      <div><div class="small" style="color:#7d939b">Decisions waiting for you</div><div style="font-size:28px;font-weight:600;color:#f0b04a">${pendingCandidates().length + S.issues.filter(i => i.status === 'Draft').length}</div></div>
-      <div><div class="small" style="color:#7d939b">Above appetite</div><div style="font-size:28px;font-weight:600;color:#f0707a">${above.length}</div></div>
+      <div class="hero-stat"><div class="l">Agents enabled</div><div class="v">${enabled} / ${AGENTS.length}</div></div>
+      <div class="hero-stat"><div class="l">Agent runs logged</div><div class="v">${runs.toLocaleString()}</div></div>
+      <div class="hero-stat"><div class="l">Decisions waiting for you</div><div class="v warn">${pendingCandidates().length + S.issues.filter(i => i.status === 'Draft').length}</div></div>
+      <div class="hero-stat"><div class="l">Above appetite</div><div class="v crit">${above.length}</div></div>
     </div>
   </section>
   <div class="row between mt2" style="margin-bottom:12px"><h2>AI-enabled lifecycle</h2><a class="btn" href="#agents">${icon('bot')} Agent control centre</a></div>

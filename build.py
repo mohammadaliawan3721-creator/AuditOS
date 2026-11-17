@@ -32,11 +32,13 @@ html = f'''<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#2563eb">
+<script>try{{var t=localStorage.getItem('auditos.theme');if(t&&t!=='system')document.documentElement.dataset.theme=t;}}catch(e){{}}</script>
 <title>AuditOS Internal Audit Suite</title>
 <meta name="description" content="AI-first internal audit orchestration prototype: risk sensing, assessment, planning, fieldwork, issues and reporting with human-in-the-loop agents.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 {css}
 </style>

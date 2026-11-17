@@ -160,7 +160,10 @@ const ICONS = {
   spark: 'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6',
   copy: 'M8 8h12v12H8zM4 16V4h12',
   upload: 'M12 16V4M7 9l5-5 5 5M4 20h16',
-  plus: 'M12 5v14M5 12h14'
+  plus: 'M12 5v14M5 12h14',
+  sun: 'M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
+  moon: 'M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z',
+  contrast: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 3v18'
 };
 function icon(name, size = 16) {
   return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICONS[name] || ICONS.spark}"/></svg>`;
@@ -190,19 +193,21 @@ function currentRoute() { const h = location.hash.replace('#', ''); return ROUTE
 
 function renderShell() {
   document.body.innerHTML = `
+  <button class="skip" data-act="skipToMain">Skip to main content</button>
   <div class="app">
     <header class="topbar">
       <button class="btn ghost menu-btn" data-act="toggleRail" aria-label="Open menu">${icon('menu', 18)}</button>
-      <div class="brand"><span class="brand-mark"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#3cb7ad" stroke-width="2.2" stroke-linecap="round"><path d="M4 18L10 6l4 8 2-4 4 8"/></svg></span>AuditOS<small>Internal audit orchestration</small></div>
+      <div class="brand"><span class="brand-mark"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 18L10 6l4 8 2-4 4 8"/></svg></span>AuditOS<small>Internal audit orchestration</small></div>
       <div class="spacer"></div>
       <span class="mode-pill" title="Agents return demo output. Switch to live in the Agent control centre once the backend exists.">Simulated agents</span>
+      <button class="btn ghost sm" data-act="toggleTheme" id="themeBtn" aria-label="Colour theme: ${themePref()}" title="Colour theme: ${themePref()}">${themeIcon()}</button>
       <span class="org-pill" id="orgName">${esc(ORG.name)} · ${ORG.fy}</span>
       <select class="ind-select" data-chg="industry" aria-label="Industry">${INDUSTRIES.map(([k, l]) => `<option value="${k}" ${k === IND ? 'selected' : ''}>${l}</option>`).join('')}</select>
       <select class="ind-select" data-chg="user" aria-label="Signed in as" title="Switch user to test preparer and reviewer segregation of duties">${USERS().map(u => `<option value="${u.key}" ${u.name === ME ? 'selected' : ''}>${esc(u.name)} · ${u.role}</option>`).join('')}</select>
       <span class="avatar" title="${esc(ME)}">${esc(ME.split(' ').slice(0, 2).map(w => w[0]).join(''))}</span>
     </header>
     <nav class="rail" id="rail" aria-label="Modules"></nav>
-    <main class="main" id="main"></main>
+    <main class="main" id="main" tabindex="-1"></main>
   </div>
   <div class="scrim" id="scrim" data-act="closeAll"></div>
   <aside class="drawer" id="drawer" aria-hidden="true"></aside>
@@ -214,8 +219,8 @@ function renderRail() {
   $('#rail').innerHTML = ROUTES.map(r => {
     if (r.sec) return `<div class="section">${r.sec}</div>`;
     const b = r.badge ? r.badge() : 0;
-    return `<a class="nav ${cur === r.id ? 'active' : ''}" href="#${r.id}">${icon(r.icon)}<span>${r.label}</span>${b ? `<span class="badge">${b}</span>` : ''}</a>`;
-  }).join('') + `<div class="foot">Agents propose. Auditors decide.<br>Demo data: ${esc(ORG.name)} is fictional.<br><button class="btn sm ghost" style="color:#7fd6cc;padding:4px 0" data-act="resetDemo">Reset demo data</button></div>`;
+    return `<a class="nav ${cur === r.id ? 'active' : ''}" href="#${r.id}" ${cur === r.id ? 'aria-current="page"' : ''}>${icon(r.icon)}<span>${r.label}</span>${b ? `<span class="badge" aria-label="${b} pending">${b}</span>` : ''}</a>`;
+  }).join('') + `<div class="foot">Agents propose. Auditors decide.<br>Demo data: ${esc(ORG.name)} is fictional.<br><button class="btn sm ghost" style="padding:4px 0" data-act="resetDemo">Reset demo data</button></div>`;
 }
 function render() {
   const route = currentRoute();
@@ -223,18 +228,40 @@ function render() {
   $('#main').innerHTML = RENDER[route]();
   $('#rail').classList.remove('open');
   if (typeof AFTER[route] === 'function') AFTER[route]();
+  enhanceA11y($('#main'));
 }
+/* Clickable non-button elements (cards, rows) become keyboard operable */
+function enhanceA11y(root) {
+  if (!root) return;
+  root.querySelectorAll('[data-act], [data-go]').forEach(el => {
+    if (/^(BUTTON|A|INPUT|SELECT|TEXTAREA|LABEL)$/.test(el.tagName) || el.hasAttribute('tabindex')) return;
+    el.setAttribute('tabindex', '0'); el.setAttribute('role', 'button');
+  });
+}
+document.addEventListener('keydown', e => {
+  const t = e.target;
+  if ((e.key === 'Enter' || e.key === ' ') && t.getAttribute && t.getAttribute('role') === 'button' && !/^(BUTTON|A)$/.test(t.tagName)) { e.preventDefault(); t.click(); }
+});
+/* Theme: system, light or dark */
+function themePref() { try { return localStorage.getItem('auditos.theme') || 'system'; } catch (e) { return 'system'; } }
+function themeIcon(p = themePref()) { return icon(p === 'dark' ? 'moon' : p === 'light' ? 'sun' : 'contrast', 16); }
 const AFTER = {};
 
 /* ---------- Overlays ---------- */
-function openDrawer(html) { const d = $('#drawer'); d.innerHTML = html; d.classList.add('open'); d.setAttribute('aria-hidden', 'false'); $('#scrim').classList.add('open'); }
-function closeDrawer() { $('#drawer').classList.remove('open'); $('#drawer').setAttribute('aria-hidden', 'true'); if (!$('#modal').classList.contains('open')) $('#scrim').classList.remove('open'); }
+let lastFocus = null;
+const overlayOpen = () => $('#drawer').classList.contains('open') || $('#modal').classList.contains('open');
+function rememberFocus() { if (!overlayOpen()) lastFocus = document.activeElement; }
+function restoreFocus() { if (!overlayOpen() && lastFocus && document.contains(lastFocus)) lastFocus.focus({ preventScroll: true }); }
+function openDrawer(html) { rememberFocus(); const d = $('#drawer'); d.innerHTML = html; d.classList.add('open'); d.setAttribute('aria-hidden', 'false'); $('#scrim').classList.add('open'); enhanceA11y(d); const x = d.querySelector('.x'); if (x) x.focus({ preventScroll: true }); }
+function closeDrawer() { const was = $('#drawer').classList.contains('open'); $('#drawer').classList.remove('open'); $('#drawer').setAttribute('aria-hidden', 'true'); if (!$('#modal').classList.contains('open')) $('#scrim').classList.remove('open'); if (was) restoreFocus(); }
 function openModal(title, body, foot = '') {
+  rememberFocus();
   const m = $('#modal');
   m.innerHTML = `<div class="modal-head"><h3>${title}</h3><button class="x" data-act="closeModal" aria-label="Close">×</button></div><div class="modal-body">${body}</div>${foot ? `<div class="modal-foot">${foot}</div>` : ''}`;
-  m.classList.add('open'); $('#scrim').classList.add('open');
+  m.classList.add('open'); $('#scrim').classList.add('open'); enhanceA11y(m);
+  const f = m.querySelector('.modal-foot .btn.primary:not([disabled]), .modal-body input, .modal-body textarea, .x'); if (f) f.focus({ preventScroll: true });
 }
-function closeModal() { $('#modal').classList.remove('open'); if (!$('#drawer').classList.contains('open')) $('#scrim').classList.remove('open'); }
+function closeModal() { const was = $('#modal').classList.contains('open'); $('#modal').classList.remove('open'); if (!$('#drawer').classList.contains('open')) $('#scrim').classList.remove('open'); if (was) restoreFocus(); }
 let toastTimer;
 function toast(msg, kind = 'ok') {
   const t = $('#toast');
@@ -258,6 +285,14 @@ function consoleModal(title) {
 /* ---------- Event delegation ---------- */
 const ACT = {
   toggleRail: () => $('#rail').classList.toggle('open'),
+  skipToMain: () => $('#main').focus(),
+  toggleTheme: () => {
+    const next = { system: 'light', light: 'dark', dark: 'system' }[themePref()];
+    try { localStorage.setItem('auditos.theme', next); } catch (e) { /* storage unavailable */ }
+    if (next === 'system') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = next;
+    const b = $('#themeBtn'); b.innerHTML = themeIcon(next); b.title = `Colour theme: ${next}`; b.setAttribute('aria-label', b.title);
+    toast(next === 'system' ? 'Theme follows your system setting' : `Theme: ${next}`);
+  },
   closeAll: () => { closeDrawer(); closeModal(); },
   closeModal: () => closeModal(),
   closeDrawer: () => closeDrawer(),

@@ -7,5 +7,5 @@ let savedUser = null;
 try { savedUser = localStorage.getItem('auditos.user'); } catch (e) { /* storage unavailable */ }
 setUser(savedUser || 'mgr');
 renderShell();
-window.addEventListener('hashchange', render);
+window.addEventListener('hashchange', () => { render(); $('#main').scrollTop = 0; $('#main').focus({ preventScroll: true }); });
 render();
